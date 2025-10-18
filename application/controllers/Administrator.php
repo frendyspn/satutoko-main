@@ -15,6 +15,14 @@ class Administrator extends CI_Controller {
 		if (isset($_POST['submit'])){
             if ($this->input->post() && (strtolower($this->input->post('security_code')) == strtolower($this->session->userdata('mycaptcha')))) {
                 $username = $this->input->post('a');
+				$cek = $this->model_app->view_where('users',array('username'=>$this->input->post('b')))->row_array();
+				if (!password_verify($this->input->post('b'), $cek->password)) {
+				    echo $this->session->set_flashdata('message', '<div class="alert alert-danger"><center>Username dan Password Salah!!</center></div>');
+    				redirect($this->uri->segment(1).'/index');
+				}
+				echo $this->session->set_flashdata('message', '<div class="alert alert-success"><center>Username dan Password Benar!!</center></div>');
+    			redirect($this->uri->segment(1).'/index');
+				
     			$password = hash("sha512", md5($this->input->post('b')));
     			$cek = $this->model_app->cek_login($username,$password,'users');
     		    $row = $cek->row_array();
