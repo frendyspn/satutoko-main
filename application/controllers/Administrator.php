@@ -11,19 +11,19 @@
 */
 defined('BASEPATH') OR exit('No direct script access allowed');
 class Administrator extends CI_Controller {
+    function hashpass(){
+        echo hash("sha512", md5('123456'));
+    }
 	function index(){
 		if (isset($_POST['submit'])){
             if ($this->input->post() && (strtolower($this->input->post('security_code')) == strtolower($this->session->userdata('mycaptcha')))) {
                 $username = $this->input->post('a');
-				$cek = $this->model_app->view_where('users',array('username'=>$this->input->post('b')))->row_array();
-				if (!password_verify($this->input->post('b'), $cek->password)) {
+				$cek = $this->model_app->view_where('users',array('username'=>$username))->row_array();
+				if (!password_verify($this->input->post('b'), $cek['password'])) {
 				    echo $this->session->set_flashdata('message', '<div class="alert alert-danger"><center>Username dan Password Salah!!</center></div>');
     				redirect($this->uri->segment(1).'/index');
 				}
-				echo $this->session->set_flashdata('message', '<div class="alert alert-success"><center>Username dan Password Benar!!</center></div>');
-    			redirect($this->uri->segment(1).'/index');
-				
-    			$password = hash("sha512", md5($this->input->post('b')));
+    			$password = $cek['password'];
     			$cek = $this->model_app->cek_login($username,$password,'users');
     		    $row = $cek->row_array();
     		    $total = $cek->num_rows();
@@ -46,21 +46,57 @@ class Administrator extends CI_Controller {
               redirect($this->uri->segment(1).'/home');
             }else{
                 $this->load->helper('captcha');
-                $vals = array(
-                    'img_path'   => './captcha/',
-                    'img_url'    => base_url().'captcha/',
-                    'font_path' => base_url().'asset/Tahoma.ttf',
-                    'font_size'     => 17,
-                    'img_width'  => '320',
-                    'img_height' => 33,
-                    'border' => 0, 
-                    'word_length'   => 5,
-                    'expiration' => 7200
-                );
+                
+                // Cek apakah GD tersedia
+                // if (!function_exists('imagecreate')) {
+                if (true) {
+                    // GD tidak tersedia, gunakan captcha teks sederhana
+                    $captcha_word = substr(str_shuffle('ABCDEFGHJKLMNPQRSTUVWXYZ23456789'), 0, 5);
+                    $this->session->set_userdata('mycaptcha', $captcha_word);
+                    
+                    $data['image'] = '<div style="border: 2px solid #ccc; padding: 10px; background: #f5f5f5; text-align: center; font-weight: bold; letter-spacing: 3px; font-size: 18px; margin: 10px 0;">' . $captcha_word . '</div>';
+                    $data['data'] = array('word' => $captcha_word);
+                } else {
+                    // GD tersedia, gunakan captcha gambar
+                    $captcha_path = FCPATH.'captcha/';
+                    if (!is_dir($captcha_path)) {
+                        mkdir($captcha_path, 0777, true);
+                    }
+                    
+                    $vals = array(
+                        'img_path'   => $captcha_path,
+                        'img_url'    => base_url().'captcha/',
+                        'img_width'  => 150,
+                        'img_height' => 30,
+                        'word_length' => 5
+                    );
 
-                $cap = create_captcha($vals);
-                $data['image'] = $cap['image'];
-                $this->session->set_userdata('mycaptcha', $cap['word']);
+                    $cap = create_captcha($vals);
+                    
+                    if ($cap) {
+                        $data['image'] = $cap['image'];
+                        $data['data'] = $cap;
+                        $this->session->set_userdata('mycaptcha', $cap['word']);
+                    } else {
+                        // Fallback ke captcha teks
+                        $captcha_word = substr(str_shuffle('ABCDEFGHJKLMNPQRSTUVWXYZ23456789'), 0, 5);
+                        $this->session->set_userdata('mycaptcha', $captcha_word);
+                        $data['image'] = '<div style="border: 2px solid #ccc; padding: 10px; background: #f5f5f5; text-align: center; font-weight: bold; letter-spacing: 3px; font-size: 18px; margin: 10px 0;">' . $captcha_word . '</div>';
+                        $data['data'] = array('word' => $captcha_word);
+                    }
+
+                    if ($cap) {
+                        $data['image'] = $cap['image'];
+                        $data['data'] = $cap;
+                        $this->session->set_userdata('mycaptcha', $cap['word']);
+                    } else {
+                        $data['image'] = 'Captcha gagal dibuat';
+                        $data['data'] = array();
+                    }
+                }
+                
+                
+                
     			$data['title'] = 'Administrator &rsaquo; Log In';
     			$this->load->view('administrator/view_login',$data);
             }

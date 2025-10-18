@@ -41,6 +41,7 @@
           </div>
 
           <div class="form-group has-feedback">
+            
             <?php echo $image; ?>
           </div>
           <div class="form-group has-feedback">
@@ -117,6 +118,7 @@
     </div>
   </div>
 </div>
+
         
   </body>
 </html>
